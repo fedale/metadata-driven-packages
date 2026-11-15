@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests\Support;
+namespace Fedale\PackageCatalog\Tests\Support;
 
-use Fedale\TemplateCatalog\Owners\MembershipUnknown;
-use Fedale\TemplateCatalog\Owners\OrganizationMembers;
+use Fedale\PackageCatalog\Owners\MembershipUnknown;
+use Fedale\PackageCatalog\Owners\OrganizationMembers;
 
 /**
  * Organizations and their public members, in place of the GitHub API.

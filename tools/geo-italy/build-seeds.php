@@ -8,7 +8,7 @@ declare(strict_types=1);
  * "Elenco dei comuni italiani":
  *
  *   curl -L -o comuni.csv https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv
- *   php tools/geo-italy/build-seeds.php comuni.csv templates/fedale/geo-italy/<version>/seeds
+ *   php tools/geo-italy/build-seeds.php comuni.csv packages/fedale/geo-italy/<version>/seeds
  *
  * The ISTAT file is semicolon-separated, Windows-1252, one row per municipality. The columns read
  * (0-based): 0 region code, 1 province code (supra-municipal unit), 4 municipality code
@@ -75,7 +75,7 @@ function write(string $directory, string $name, array $header, array $rows): voi
 
 [, $source, $output] = $argv + [null, null, null];
 if (!is_string($source) || !is_string($output)) {
-    fail('Usage: php tools/geo-italy/build-seeds.php <Elenco-comuni-italiani.csv> <template>/seeds');
+    fail('Usage: php tools/geo-italy/build-seeds.php <Elenco-comuni-italiani.csv> <package>/seeds');
 }
 if (!is_dir($output)) {
     fail(sprintf('%s is not a directory.', $output));

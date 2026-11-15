@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
 /**
  * A file a pull request adds, modifies or deletes, relative to the root of the repository.

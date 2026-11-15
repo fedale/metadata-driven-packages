@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ title is not null ? title ~ ' · ' : '' }}metadata-driven templates</title>
+    <title>{{ title is not null ? title ~ ' · ' : '' }}metadata-driven packages</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232f5d50'/%3E%3Cpath d='M4 5h8M4 8h8M4 11h5' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
     <meta name="description" content="{% block description %}Ready-made models for metadata-driven: objects, forms, views, translations and data, installed in one command.{% endblock %}">
     <style>
@@ -61,15 +61,15 @@
 </head>
 <body>
 <header class="site">
-    <a href="{{ root }}">metadata-driven templates</a>
+    <a href="{{ root }}">metadata-driven packages</a>
     <span>the central catalog</span>
 </header>
 <main>
 {% block body %}{% endblock %}
 </main>
 <footer class="site">
-    Every template is reviewed before it is listed. Sources, publishing guide and index:
-    <a href="https://github.com/fedale/metadata-driven-templates">fedale/metadata-driven-templates</a>
+    Every package is reviewed before it is listed. Sources, publishing guide and index:
+    <a href="https://github.com/fedale/metadata-driven-packages">fedale/metadata-driven-packages</a>
     · <a href="{{ root }}index.json">index.json</a> · <a href="{{ root }}search.json">search.json</a>
 </footer>
 </body>

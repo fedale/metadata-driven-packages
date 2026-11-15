@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
-use Fedale\TemplateFormat\Format;
+use Fedale\PackageFormat\Format;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -12,18 +12,18 @@ use Symfony\Component\Yaml\Yaml;
  * The yanked versions (yanked.yaml): hidden from new installs and upgrades, still there for
  * whoever names them. The index flags them, and the flag is signed.
  *
- * `vendor/name: all` removes a template: every version is yanked, and the catalog stops
+ * `vendor/name: all` removes a package: every version is yanked, and the catalog stops
  * listing it. Its versions stay installable by their exact version: installations rely on them
  * to upgrade.
  */
 final readonly class Yanked
 {
-    /** In place of a list of versions: every version of the template. */
+    /** In place of a list of versions: every version of the package. */
     public const string ALL = 'all';
 
     /**
-     * @param array<string, list<string>> $versions by template name
-     * @param list<string>                $removed  the templates whose every version is yanked
+     * @param array<string, list<string>> $versions by package name
+     * @param list<string>                $removed  the packages whose every version is yanked
      */
     private function __construct(private array $versions, private array $removed = [])
     {
@@ -40,7 +40,7 @@ final readonly class Yanked
             throw new \InvalidArgumentException(\sprintf('yanked.yaml is not valid YAML: %s', $e->getMessage()), 0, $e);
         }
         if (!\is_array($data)) {
-            throw new \InvalidArgumentException('yanked.yaml maps each template to its yanked versions.');
+            throw new \InvalidArgumentException('yanked.yaml maps each package to its yanked versions.');
         }
 
         $versions = [];
@@ -52,7 +52,7 @@ final readonly class Yanked
                 continue;
             }
             if (1 !== preg_match(Format::NAME_PATTERN, $name) || !\is_array($list)) {
-                throw new \InvalidArgumentException(\sprintf('yanked.yaml: "%s" is not a template name followed by a list of versions, or by "all".', $name));
+                throw new \InvalidArgumentException(\sprintf('yanked.yaml: "%s" is not a package name followed by a list of versions, or by "all".', $name));
             }
             foreach ($list as $version) {
                 if (!\is_string($version) || 1 !== preg_match(Format::VERSION_PATTERN, $version)) {
@@ -71,7 +71,7 @@ final readonly class Yanked
     }
 
     /**
-     * Whether every version of the template is yanked: the catalog no longer lists it.
+     * Whether every version of the package is yanked: the catalog no longer lists it.
      */
     public function isRemoved(string $name): bool
     {
@@ -79,7 +79,7 @@ final readonly class Yanked
     }
 
     /**
-     * @return list<string> the removed templates
+     * @return list<string> the removed packages
      */
     public function removed(): array
     {
@@ -88,7 +88,7 @@ final readonly class Yanked
 
     /**
      * @return list<array{string, string}> every version yanked by name, as [name, version]; a
-     *                                     removed template is in removed()
+     *                                     removed package is in removed()
      */
     public function all(): array
     {
@@ -104,7 +104,7 @@ final readonly class Yanked
 
     /**
      * The versions yanked in one list and not in the other: what a change of the file yanks or
-     * lists again. A template removed or listed again is [name, "all"].
+     * lists again. A package removed or listed again is [name, "all"].
      *
      * @return list<array{string, string}>
      */

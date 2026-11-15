@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests;
+namespace Fedale\PackageCatalog\Tests;
 
-use Fedale\TemplateCatalog\Owners\Maintainers;
-use Fedale\TemplateCatalog\Vendors;
+use Fedale\PackageCatalog\Owners\Maintainers;
+use Fedale\PackageCatalog\Vendors;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

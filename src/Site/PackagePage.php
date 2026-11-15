@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Site;
+namespace Fedale\PackageCatalog\Site;
 
-use Fedale\TemplateFormat\Document;
-use Fedale\TemplateFormat\DocumentKind;
-use Fedale\TemplateFormat\IndexEntry;
-use Fedale\TemplateFormat\Package;
-use Fedale\TemplateFormat\SeedRecords;
+use Fedale\PackageFormat\Document;
+use Fedale\PackageFormat\DocumentKind;
+use Fedale\PackageFormat\IndexEntry;
+use Fedale\PackageFormat\Package;
+use Fedale\PackageFormat\SeedRecords;
 use League\CommonMark\GithubFlavoredMarkdownConverter;
 
 /**
- * What the page of a template shows, read from the documents of its current version: the
+ * What the page of a package shows, read from the documents of its current version: the
  * newest one not yanked (the newest of all when every one is), as an install without a version
  * would take it.
  *
- * Everything here comes from the authors of the templates: the pages escape it (Twig's
+ * Everything here comes from the authors of the packages: the pages escape it (Twig's
  * autoescape), and the README is rendered with raw HTML escaped and unsafe links dropped.
  */
-final readonly class TemplatePage
+final readonly class PackagePage
 {
     /** The README of a version: optional, Markdown, at the root of its directory. */
     public const string README = 'README.md';
@@ -31,8 +31,8 @@ final readonly class TemplatePage
      * @param list<array{name: string, label: string}>                                                                                                                                $forms
      * @param list<array{object: string, records: int, managed: bool}>                                                                                                                $seeds
      * @param list<string>                                                                                                                                                            $locales    the languages its translations add
-     * @param array<string, string>                                                                                                                                                   $requires   the templates its current version requires: name => constraint
-     * @param list<string>                                                                                                                                                            $requiredBy the templates listed whose current version requires it
+     * @param array<string, string>                                                                                                                                                   $requires   the packages its current version requires: name => constraint
+     * @param list<string>                                                                                                                                                            $requiredBy the packages listed whose current version requires it
      */
     public function __construct(
         public string $name,
@@ -58,7 +58,7 @@ final readonly class TemplatePage
      * The version a page shows, and an install without a version takes: the newest not yanked,
      * the newest of all when every one is.
      *
-     * @param non-empty-list<array{Package, IndexEntry}> $versions every version of one template, any order
+     * @param non-empty-list<array{Package, IndexEntry}> $versions every version of one package, any order
      *
      * @return array{Package, IndexEntry}
      */
@@ -75,7 +75,7 @@ final readonly class TemplatePage
     }
 
     /**
-     * The templates a version requires: name => constraint, the format left out.
+     * The packages a version requires: name => constraint, the format left out.
      *
      * @return array<string, string>
      */
@@ -85,8 +85,8 @@ final readonly class TemplatePage
     }
 
     /**
-     * @param non-empty-list<array{Package, IndexEntry}> $versions   every version of one template, any order
-     * @param list<string>                               $requiredBy the templates listed whose current version requires it
+     * @param non-empty-list<array{Package, IndexEntry}> $versions   every version of one package, any order
+     * @param list<string>                               $requiredBy the packages listed whose current version requires it
      */
     public static function of(array $versions, SeedRecords $records, bool $removed = false, bool $verified = false, array $requiredBy = []): self
     {
@@ -152,11 +152,11 @@ final readonly class TemplatePage
     }
 
     /**
-     * The page's path in the site, from its root: templates/<vendor>/<name>/.
+     * The page's path in the site, from its root: packages/<vendor>/<name>/.
      */
     public function path(): string
     {
-        return 'templates/'.$this->name.'/';
+        return 'packages/'.$this->name.'/';
     }
 
     /**

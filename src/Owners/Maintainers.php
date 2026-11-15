@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Owners;
+namespace Fedale\PackageCatalog\Owners;
 
 /**
  * The catalog's maintainers: the users .github/CODEOWNERS names, whose review every pull

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Command;
+namespace Fedale\PackageCatalog\Command;
 
-use Fedale\TemplateCatalog\BuildFailed;
-use Fedale\TemplateCatalog\CatalogBuilder;
+use Fedale\PackageCatalog\BuildFailed;
+use Fedale\PackageCatalog\CatalogBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,11 +31,11 @@ final class BuildCommand extends Command
             ->addOption('unsigned', null, InputOption::VALUE_NONE, 'Build without signing, to look at it locally: never publish it')
             ->addOption('site-url', null, InputOption::VALUE_REQUIRED, 'Where the site is served: the pages tell installations to use its index.json', CatalogBuilder::SITE_URL)
             ->setHelp(<<<'HELP'
-                Packs every version under templates/ into archives/<vendor>/<name>-<version>.tar.gz,
+                Packs every version under packages/ into archives/<vendor>/<name>-<version>.tar.gz,
                 and lists them in index.json, yanked versions flagged (yanked.yaml), each entry
                 signed with the catalog's secret key, read from the CATALOG_SECRET_KEY environment
                 variable and checked against catalog.pub. Then the pages: index.html (every
-                template, searchable), templates/<vendor>/<name>/index.html and search.json.
+                package, searchable), packages/<vendor>/<name>/index.html and search.json.
 
                 Nothing is written unless every version is valid.
                 HELP);

@@ -1,11 +1,11 @@
 {
-    "name": "fedale/metadata-driven-templates",
+    "name": "fedale/metadata-driven-packages",
     "type": "project",
-    "description": "The central catalog of metadata-driven templates: their sources, and the tools that check and publish them",
+    "description": "The central catalog of metadata-driven packages: their sources, and the tools that check and publish them",
     "license": "MIT",
     "require": {
         "php": ">=8.4",
-        "fedale/metadata-driven-template-format": "^1.2",
+        "fedale/metadata-driven-package-format": "^2.1",
         "league/commonmark": "^2.7",
         "symfony/console": "^8.0",
         "symfony/http-client": "^8.0",
@@ -20,12 +20,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Fedale\\TemplateCatalog\\": "src/"
+            "Fedale\\PackageCatalog\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Fedale\\TemplateCatalog\\Tests\\": "tests/"
+            "Fedale\\PackageCatalog\\Tests\\": "tests/"
         }
     },
     "bin": ["bin/catalog"],

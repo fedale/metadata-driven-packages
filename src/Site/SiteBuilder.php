@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Site;
+namespace Fedale\PackageCatalog\Site;
 
-use Fedale\TemplateCatalog\BuildFailed;
-use Fedale\TemplateCatalog\Vendors;
-use Fedale\TemplateFormat\IndexEntry;
-use Fedale\TemplateFormat\Package;
-use Fedale\TemplateFormat\SeedRecords;
+use Fedale\PackageCatalog\BuildFailed;
+use Fedale\PackageCatalog\Vendors;
+use Fedale\PackageFormat\IndexEntry;
+use Fedale\PackageFormat\Package;
+use Fedale\PackageFormat\SeedRecords;
 use Twig\Environment;
 use Twig\Error\Error as TwigError;
 use Twig\Loader\FilesystemLoader;
 
 /**
- * The pages of the catalog, beside index.json: the home page (every template, searched in the
- * browser), a page per template, and search.json, the same list for tools.
+ * The pages of the catalog, beside index.json: the home page (every package, searched in the
+ * browser), a page per package, and search.json, the same list for tools.
  *
  * Every link is relative: the site works wherever it is served (GitHub Pages serves it under
- * /metadata-driven-templates/). Nothing depends on the time of the build: the same sources
+ * /metadata-driven-packages/). Nothing depends on the time of the build: the same sources
  * give the same pages.
  */
 final readonly class SiteBuilder
@@ -41,7 +41,7 @@ final readonly class SiteBuilder
      * @param list<IndexEntry>       $entries   their entries in the index, in the same order
      * @param string                 $siteUrl   where the site is served, ending with "/"
      * @param string|null            $publicKey the catalog's public key; null for an unsigned build
-     * @param list<string>           $removed   the templates removed from the catalog (yanked.yaml:
+     * @param list<string>           $removed   the packages removed from the catalog (yanked.yaml:
      *                                          all): their pages stay, the lists leave them out
      * @param Vendors|null           $vendors   which vendors the maintainers verified
      *
@@ -54,31 +54,31 @@ final readonly class SiteBuilder
             $byName[$package->name()][] = [$package, $entries[$i]];
         }
         ksort($byName);
-        // What requires each template: the current versions of those listed, as an install takes them.
+        // What requires each package: the current versions of those listed, as an install takes them.
         $requiredBy = [];
         foreach ($byName as $name => $versions) {
             if (\in_array($name, $removed, true)) {
                 continue;
             }
-            foreach (array_keys(TemplatePage::requirementsOf(TemplatePage::current($versions)[1])) as $required) {
+            foreach (array_keys(PackagePage::requirementsOf(PackagePage::current($versions)[1])) as $required) {
                 $requiredBy[$required][] = $name;
             }
         }
-        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of(
+        $pages = array_map(fn (array $versions): PackagePage => PackagePage::of(
             $versions,
             $this->records,
             \in_array($versions[0][0]->name(), $removed, true),
             $vendors?->isVerified(explode('/', $versions[0][0]->name())[0]) ?? false,
             $requiredBy[$versions[0][0]->name()] ?? [],
         ), array_values($byName));
-        $listed = array_values(array_filter($pages, static fn (TemplatePage $page): bool => !$page->removed));
+        $listed = array_values(array_filter($pages, static fn (PackagePage $page): bool => !$page->removed));
 
         foreach ($pages as $page) {
-            $this->write($output.'/'.$page->path().'index.html', $this->render('template.html.twig', [
+            $this->write($output.'/'.$page->path().'index.html', $this->render('package.html.twig', [
                 'root' => '../../../',
                 'page' => $page,
                 'title' => $page->label,
-                // The templates with a page: a requirement links to its own.
+                // The packages with a page: a requirement links to its own.
                 'names' => array_keys($byName),
             ]));
         }
@@ -90,7 +90,7 @@ final readonly class SiteBuilder
             'public_key' => $publicKey,
         ]));
         $this->write($output.'/'.self::SEARCH, json_encode([
-            'templates' => array_map(static fn (TemplatePage $page): array => [
+            'packages' => array_map(static fn (PackagePage $page): array => [
                 'name' => $page->name,
                 'label' => $page->label,
                 'description' => $page->description,
@@ -108,12 +108,12 @@ final readonly class SiteBuilder
      *
      * @throws BuildFailed
      */
-    private function render(string $template, array $context): string
+    private function render(string $package, array $context): string
     {
         try {
-            return $this->twig->render($template, $context);
+            return $this->twig->render($package, $context);
         } catch (TwigError $e) {
-            throw new BuildFailed([\sprintf('%s: %s', $template, $e->getMessage())], $e);
+            throw new BuildFailed([\sprintf('%s: %s', $package, $e->getMessage())], $e);
         }
     }
 

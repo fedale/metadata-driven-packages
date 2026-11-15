@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
 /**
  * Symbolic links in the checkout: git stores them, and read through, they could reach any file of

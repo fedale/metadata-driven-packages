@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests\Command;
+namespace Fedale\PackageCatalog\Tests\Command;
 
-use Fedale\TemplateCatalog\Command\CheckCommand;
-use Fedale\TemplateCatalog\PullRequestCheck;
-use Fedale\TemplateCatalog\Tests\Support\PublicMembers;
-use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
-use Fedale\TemplateFormat\DocumentCodec;
-use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\PackageDirectory;
-use Fedale\TemplateFormat\SchemaValidator;
-use Fedale\TemplateFormat\SeedRecords;
-use Fedale\TemplateFormat\Versions\ItemStates;
+use Fedale\PackageCatalog\Command\CheckCommand;
+use Fedale\PackageCatalog\PullRequestCheck;
+use Fedale\PackageCatalog\Tests\Support\PublicMembers;
+use Fedale\PackageCatalog\Tests\Support\TemporaryCatalog;
+use Fedale\PackageFormat\DocumentCodec;
+use Fedale\PackageFormat\FieldTypes\FieldTypeCatalog;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\PackageDirectory;
+use Fedale\PackageFormat\SchemaValidator;
+use Fedale\PackageFormat\SeedRecords;
+use Fedale\PackageFormat\Versions\ItemStates;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -56,15 +56,15 @@ final class CheckCommandTest extends TestCase
     public function testAPullRequestWithProblems(): void
     {
         $this->addVersion('1.1.0');
-        file_put_contents($this->root.'/templates/acme/shop/1.0.0/README.md', '# Shop');
+        file_put_contents($this->root.'/packages/acme/shop/1.0.0/README.md', '# Shop');
         $this->commit('Publish acme/shop 1.1.0, touch 1.0.0');
 
         $tester = $this->runCheck(['--author' => 'anna']);
 
         self::assertSame(Command::FAILURE, $tester->getStatusCode());
         self::assertSame([
-            'templates/acme/shop/1.0.0/README.md: A published version never changes: publish a new version instead.',
-            'templates/acme/shop/1.1.0: anna is not an owner of the vendor "acme" (vendors.yaml).',
+            'packages/acme/shop/1.0.0/README.md: A published version never changes: publish a new version instead.',
+            'packages/acme/shop/1.1.0: anna is not an owner of the vendor "acme" (vendors.yaml).',
             '2 problem(s): fix them and push again.',
         ], array_values(array_filter(explode("\n", $tester->getDisplay()))));
     }

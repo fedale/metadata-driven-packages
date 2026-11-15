@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Owners;
+namespace Fedale\PackageCatalog\Owners;
 
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -27,7 +27,7 @@ final readonly class GitHubOrganizationMembers implements OrganizationMembers
 
     public function isPublicMember(string $organization, string $login): bool
     {
-        $headers = ['Accept' => 'application/vnd.github+json', 'X-GitHub-Api-Version' => '2022-11-28', 'User-Agent' => 'metadata-driven-templates-check'];
+        $headers = ['Accept' => 'application/vnd.github+json', 'X-GitHub-Api-Version' => '2022-11-28', 'User-Agent' => 'metadata-driven-packages-check'];
         if (null !== $this->token && '' !== $this->token) {
             $headers['Authorization'] = 'Bearer '.$this->token;
         }

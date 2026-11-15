@@ -14,7 +14,7 @@
     </php>
 
     <testsuites>
-        <testsuite name="Template catalog">
+        <testsuite name="Package catalog">
             <directory>tests</directory>
         </testsuite>
     </testsuites>

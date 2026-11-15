@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Command;
+namespace Fedale\PackageCatalog\Command;
 
-use Fedale\TemplateCatalog\BaseBranch;
-use Fedale\TemplateCatalog\Git;
-use Fedale\TemplateCatalog\PullRequestCheck;
+use Fedale\PackageCatalog\BaseBranch;
+use Fedale\PackageCatalog\Git;
+use Fedale\PackageCatalog\PullRequestCheck;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -28,7 +28,7 @@ final class CheckCommand extends Command
             ->addOption('repository', null, InputOption::VALUE_REQUIRED, 'The checkout of the pull request', '.')
             ->addOption('author', null, InputOption::VALUE_REQUIRED, 'The GitHub login of its author: they must own the vendors it publishes under')
             ->setHelp(<<<'HELP'
-                Checks every version directory the pull request adds under templates/: a valid
+                Checks every version directory the pull request adds under packages/: a valid
                 package, matching its path, higher than the listed versions, at most 20 MB, under
                 a vendor of vendors.yaml (as the base branch lists it) that the author owns.
                 Published versions may not change. A change of yanked.yaml names published

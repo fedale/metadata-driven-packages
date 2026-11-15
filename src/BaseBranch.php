@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
-use Fedale\TemplateCatalog\Owners\Maintainers;
+use Fedale\PackageCatalog\Owners\Maintainers;
 
 /**
  * The catalog as the branch a pull request goes into has it, read from git: the pull request
@@ -13,7 +13,7 @@ use Fedale\TemplateCatalog\Owners\Maintainers;
 final readonly class BaseBranch
 {
     /**
-     * @param list<string> $published the version directories ("templates/acme/shop/1.0.0"): read
+     * @param list<string> $published the version directories ("packages/acme/shop/1.0.0"): read
      *                                from git, not from the checkout, where a published directory
      *                                and a new one look alike
      */
