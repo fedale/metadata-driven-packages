@@ -2,7 +2,7 @@
 
 $finder = (new PhpCsFixer\Finder())
     ->in(__DIR__)
-    ->exclude(['vendor', 'templates'])
+    ->exclude(['vendor', 'packages'])
     ->append(['bin/catalog'])
 ;
 

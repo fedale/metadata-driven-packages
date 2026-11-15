@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests\Command;
+namespace Fedale\PackageCatalog\Tests\Command;
 
-use Fedale\TemplateCatalog\CatalogBuilder;
-use Fedale\TemplateCatalog\Command\BuildCommand;
-use Fedale\TemplateCatalog\Site\SiteBuilder;
-use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
-use Fedale\TemplateFormat\Archive;
-use Fedale\TemplateFormat\DocumentCodec;
-use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\PackageDirectory;
-use Fedale\TemplateFormat\SchemaValidator;
-use Fedale\TemplateFormat\SeedRecords;
-use Fedale\TemplateFormat\Signature;
+use Fedale\PackageCatalog\CatalogBuilder;
+use Fedale\PackageCatalog\Command\BuildCommand;
+use Fedale\PackageCatalog\Site\SiteBuilder;
+use Fedale\PackageCatalog\Tests\Support\TemporaryCatalog;
+use Fedale\PackageFormat\Archive;
+use Fedale\PackageFormat\DocumentCodec;
+use Fedale\PackageFormat\FieldTypes\FieldTypeCatalog;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\PackageDirectory;
+use Fedale\PackageFormat\SchemaValidator;
+use Fedale\PackageFormat\SeedRecords;
+use Fedale\PackageFormat\Signature;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -67,7 +67,7 @@ final class BuildCommandTest extends TestCase
 
         self::assertSame(Command::FAILURE, $tester->getStatusCode());
         self::assertSame(
-            ['templates/acme/shop/1.1.0: The manifest says acme/shop 1.0.0.', '1 problem(s): nothing was published.'],
+            ['packages/acme/shop/1.1.0: The manifest says acme/shop 1.0.0.', '1 problem(s): nothing was published.'],
             array_values(array_filter(explode("\n", $tester->getDisplay()))),
         );
     }

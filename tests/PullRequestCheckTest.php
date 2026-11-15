@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests;
+namespace Fedale\PackageCatalog\Tests;
 
-use Fedale\TemplateCatalog\BaseBranch;
-use Fedale\TemplateCatalog\ChangedFile;
-use Fedale\TemplateCatalog\Owners\Maintainers;
-use Fedale\TemplateCatalog\PullRequestCheck;
-use Fedale\TemplateCatalog\Tests\Support\PublicMembers;
-use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
-use Fedale\TemplateCatalog\Vendors;
-use Fedale\TemplateCatalog\Yanked;
-use Fedale\TemplateFormat\DocumentCodec;
-use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\PackageDirectory;
-use Fedale\TemplateFormat\SchemaValidator;
-use Fedale\TemplateFormat\SeedRecords;
-use Fedale\TemplateFormat\Versions\ItemStates;
+use Fedale\PackageCatalog\BaseBranch;
+use Fedale\PackageCatalog\ChangedFile;
+use Fedale\PackageCatalog\Owners\Maintainers;
+use Fedale\PackageCatalog\PullRequestCheck;
+use Fedale\PackageCatalog\Tests\Support\PublicMembers;
+use Fedale\PackageCatalog\Tests\Support\TemporaryCatalog;
+use Fedale\PackageCatalog\Vendors;
+use Fedale\PackageCatalog\Yanked;
+use Fedale\PackageFormat\DocumentCodec;
+use Fedale\PackageFormat\FieldTypes\FieldTypeCatalog;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\PackageDirectory;
+use Fedale\PackageFormat\SchemaValidator;
+use Fedale\PackageFormat\SeedRecords;
+use Fedale\PackageFormat\Versions\ItemStates;
 use PHPUnit\Framework\TestCase;
 
 final class PullRequestCheckTest extends TestCase
@@ -51,14 +51,26 @@ final class PullRequestCheckTest extends TestCase
         self::assertSame([], $this->check($this->added($added), author: null));
     }
 
-    public function testAcceptsTheFirstVersionsOfATemplateTogether(): void
+    public function testANewVersionIsWrittenInFormatV2(): void
+    {
+        // A version published in v1 stays as it is; the next one is v2.
+        $this->published[] = $this->addVersionV1('1.0.0');
+
+        self::assertSame([], $this->check($this->added($this->addVersion('1.1.0'))));
+        self::assertContains(
+            'packages/acme/shop/1.2.0: A new version is written in format v2: its manifest is package.yaml, of kind Package (metadata:package:export writes it so).',
+            $this->check($this->added($this->addVersionV1('1.2.0'))),
+        );
+    }
+
+    public function testAcceptsTheFirstVersionsOfAPackageTogether(): void
     {
         $changes = [...$this->added($this->addVersion('1.0.0')), ...$this->added($this->addVersion('1.1.0'))];
 
         self::assertSame([], $this->check($changes));
     }
 
-    public function testIgnoresWhatIsNotATemplate(): void
+    public function testIgnoresWhatIsNotAPackage(): void
     {
         self::assertSame([], $this->check([new ChangedFile('M', 'vendors.yaml'), new ChangedFile('A', 'README.md')]));
     }
@@ -68,24 +80,24 @@ final class PullRequestCheckTest extends TestCase
         $this->published[] = $this->addVersion('1.0.0');
 
         self::assertSame([
-            'templates/acme/shop/1.0.0/objects/tag.yaml: A published version never changes: publish a new version instead.',
-            'templates/acme/shop/1.0.0/files/products/oslo.png: A published version never changes: publish a new version instead.',
+            'packages/acme/shop/1.0.0/objects/tag.yaml: A published version never changes: publish a new version instead.',
+            'packages/acme/shop/1.0.0/files/products/oslo.png: A published version never changes: publish a new version instead.',
         ], $this->check([
-            new ChangedFile('M', 'templates/acme/shop/1.0.0/objects/tag.yaml'),
-            new ChangedFile('D', 'templates/acme/shop/1.0.0/files/products/oslo.png'),
+            new ChangedFile('M', 'packages/acme/shop/1.0.0/objects/tag.yaml'),
+            new ChangedFile('D', 'packages/acme/shop/1.0.0/files/products/oslo.png'),
         ]));
         // Adding a file to a published version changes it too.
         self::assertSame(
-            ['templates/acme/shop/1.0.0/README.md: A published version never changes: publish a new version instead.'],
-            $this->check([new ChangedFile('A', 'templates/acme/shop/1.0.0/README.md')]),
+            ['packages/acme/shop/1.0.0/README.md: A published version never changes: publish a new version instead.'],
+            $this->check([new ChangedFile('A', 'packages/acme/shop/1.0.0/README.md')]),
         );
     }
 
     public function testAFileOutsideAVersionDirectory(): void
     {
         self::assertSame(
-            ['templates/acme/shop/README.md: A template\'s files go in templates/<vendor>/<name>/<version>/.'],
-            $this->check([new ChangedFile('A', 'templates/acme/shop/README.md')]),
+            ['packages/acme/shop/README.md: A package\'s files go in packages/<vendor>/<name>/<version>/.'],
+            $this->check([new ChangedFile('A', 'packages/acme/shop/README.md')]),
         );
     }
 
@@ -95,8 +107,8 @@ final class PullRequestCheckTest extends TestCase
         $acme = $this->addVersion('1.0.0');
 
         self::assertSame([
-            'templates/acme/shop/1.0.0: anna is not an owner of the vendor "acme" (vendors.yaml).',
-            'templates/globex/shop/1.0.0: The vendor "globex" is not registered: add it to vendors.yaml in a pull request of its own first.',
+            'packages/acme/shop/1.0.0: anna is not an owner of the vendor "acme" (vendors.yaml).',
+            'packages/globex/shop/1.0.0: The vendor "globex" is not registered: add it to vendors.yaml in a pull request of its own first.',
         ], array_values(array_filter(
             $this->check([...$this->added($globex), ...$this->added($acme)], author: 'anna'),
             // globex/shop's documents keep the acme ids of the example: only the vendor problems matter here.
@@ -110,7 +122,7 @@ final class PullRequestCheckTest extends TestCase
         $this->published[] = $this->addVersion('1.2.0');
 
         self::assertSame(
-            ['templates/acme/shop/1.1.0: acme/shop 1.2.0 is already listed: the new version must be higher.'],
+            ['packages/acme/shop/1.1.0: acme/shop 1.2.0 is already listed: the new version must be higher.'],
             $this->check($this->added($this->addVersion('1.1.0'))),
         );
     }
@@ -127,7 +139,7 @@ final class PullRequestCheckTest extends TestCase
         $patch = $this->addVersion('1.0.1');
         file_put_contents($this->root.'/'.$patch.'/objects/tag.yaml', $colour, \FILE_APPEND);
         self::assertSame(
-            ['templates/acme/shop/1.0.1/objects/tag.yaml: field acme.tag.colour: an addition needs a new minor version, 1.0.1 is not one.'],
+            ['packages/acme/shop/1.0.1/objects/tag.yaml: field acme.tag.colour: an addition needs a new minor version, 1.0.1 is not one.'],
             $this->check($this->added($patch)),
         );
 
@@ -149,7 +161,7 @@ final class PullRequestCheckTest extends TestCase
         $rename($minor, $this->root);
         // Compared with 1.1.0, the highest listed.
         self::assertSame(
-            ['templates/acme/shop/1.2.0/objects/tag.yaml: object acme.tag: a rename needs a new major version, 1.2.0 is not one.'],
+            ['packages/acme/shop/1.2.0/objects/tag.yaml: object acme.tag: a rename needs a new major version, 1.2.0 is not one.'],
             $this->check($this->added($minor)),
         );
 
@@ -158,14 +170,14 @@ final class PullRequestCheckTest extends TestCase
         self::assertSame([], $this->check($this->added($major)));
     }
 
-    public function testAnOwnerRemovesATemplate(): void
+    public function testAnOwnerRemovesAPackage(): void
     {
         $this->published[] = $this->addVersion('1.0.0');
         file_put_contents($this->root.'/yanked.yaml', "acme/shop: all\n");
 
         self::assertSame([], $this->check([new ChangedFile('M', 'yanked.yaml')]));
         self::assertSame(
-            ['yanked.yaml: anna is not an owner of the vendor "acme": only its owners remove its templates.'],
+            ['yanked.yaml: anna is not an owner of the vendor "acme": only its owners remove its packages.'],
             $this->check([new ChangedFile('M', 'yanked.yaml')], author: 'anna'),
         );
 
@@ -173,13 +185,13 @@ final class PullRequestCheckTest extends TestCase
         self::assertSame(['yanked.yaml: acme/other is not published.'], $this->check([new ChangedFile('M', 'yanked.yaml')]));
     }
 
-    public function testARemovedTemplateTakesNoNewVersion(): void
+    public function testARemovedPackageTakesNoNewVersion(): void
     {
         $this->published[] = $this->addVersion('1.0.0');
         $this->yanked = "acme/shop: all\n";
 
         self::assertSame(
-            ['templates/acme/shop/1.1.0: acme/shop is removed (yanked.yaml: all): list it again before publishing a new version.'],
+            ['packages/acme/shop/1.1.0: acme/shop is removed (yanked.yaml: all): list it again before publishing a new version.'],
             $this->check($this->added($this->addVersion('1.1.0'))),
         );
     }
@@ -197,7 +209,7 @@ final class PullRequestCheckTest extends TestCase
         self::assertSame([], $listed->asked);
 
         self::assertSame(
-            ['templates/acme/shop/1.0.0: bruno is not an owner of the vendor "acme" (vendors.yaml).'],
+            ['packages/acme/shop/1.0.0: bruno is not an owner of the vendor "acme" (vendors.yaml).'],
             $this->check($added, author: 'bruno', members: $members, vendors: $vendors),
         );
     }
@@ -205,7 +217,7 @@ final class PullRequestCheckTest extends TestCase
     public function testNoGuessWhenGitHubCannotBeAsked(): void
     {
         self::assertSame(
-            ['templates/acme/shop/1.0.0: GitHub answered 503 when asked whether anna is a public member of acme-corp. Run the check again.'],
+            ['packages/acme/shop/1.0.0: GitHub answered 503 when asked whether anna is a public member of acme-corp. Run the check again.'],
             $this->check($this->added($this->addVersion('1.0.0')), author: 'anna', members: new PublicMembers(unreachable: true), vendors: "acme:\n  owners: [acme-corp]\n"),
         );
     }
@@ -240,7 +252,7 @@ final class PullRequestCheckTest extends TestCase
         $this->published[] = $this->addVersion('1.0.0');
 
         self::assertSame(
-            ['templates/acme/shop/1.1.0: The manifest says acme/shop 1.0.0: the directory must be templates/acme/shop/1.0.0/.'],
+            ['packages/acme/shop/1.1.0: The manifest says acme/shop 1.0.0: the directory must be packages/acme/shop/1.0.0/.'],
             $this->check($this->added($this->addVersion('1.1.0', manifestVersion: '1.0.0'))),
         );
     }
@@ -248,12 +260,12 @@ final class PullRequestCheckTest extends TestCase
     public function testNamesAndVersionsFollowTheFormat(): void
     {
         self::assertSame(
-            ['templates/acme/Shop/1.0.0: "acme/Shop" is not a template name (vendor/name, lowercase letters, digits and hyphens).'],
-            $this->check([new ChangedFile('A', 'templates/acme/Shop/1.0.0/template.yaml')]),
+            ['packages/acme/Shop/1.0.0: "acme/Shop" is not a package name (vendor/name, lowercase letters, digits and hyphens).'],
+            $this->check([new ChangedFile('A', 'packages/acme/Shop/1.0.0/package.yaml')]),
         );
         self::assertSame(
-            ['templates/acme/shop/v1: "v1" is not a version (major.minor.patch, e.g. 1.0.0).'],
-            $this->check([new ChangedFile('A', 'templates/acme/shop/v1/template.yaml')]),
+            ['packages/acme/shop/v1: "v1" is not a version (major.minor.patch, e.g. 1.0.0).'],
+            $this->check([new ChangedFile('A', 'packages/acme/shop/v1/package.yaml')]),
         );
     }
 
@@ -264,20 +276,20 @@ final class PullRequestCheckTest extends TestCase
 
         $problems = $this->check($this->added($added));
 
-        self::assertNotSame([], array_filter($problems, static fn (string $problem): bool => str_starts_with($problem, 'templates/acme/shop/1.0.0/objects/tag.yaml: spec')));
+        self::assertNotSame([], array_filter($problems, static fn (string $problem): bool => str_starts_with($problem, 'packages/acme/shop/1.0.0/objects/tag.yaml: spec')));
         foreach ($problems as $problem) {
-            self::assertStringStartsWith('templates/acme/shop/1.0.0/', $problem);
+            self::assertStringStartsWith('packages/acme/shop/1.0.0/', $problem);
         }
     }
 
     public function testAMissingManifest(): void
     {
-        mkdir($this->root.'/templates/acme/shop/1.0.0', 0o777, true);
-        file_put_contents($this->root.'/templates/acme/shop/1.0.0/README.md', '# Shop');
+        mkdir($this->root.'/packages/acme/shop/1.0.0', 0o777, true);
+        file_put_contents($this->root.'/packages/acme/shop/1.0.0/README.md', '# Shop');
 
         self::assertSame(
-            ['templates/acme/shop/1.0.0/template.yaml: No manifest in "'.$this->root.'/templates/acme/shop/1.0.0".'],
-            $this->check([new ChangedFile('A', 'templates/acme/shop/1.0.0/README.md')]),
+            ['packages/acme/shop/1.0.0/package.yaml: No manifest in "'.$this->root.'/packages/acme/shop/1.0.0".'],
+            $this->check([new ChangedFile('A', 'packages/acme/shop/1.0.0/README.md')]),
         );
     }
 
@@ -285,23 +297,23 @@ final class PullRequestCheckTest extends TestCase
     {
         $added = $this->addVersion('1.0.0');
         // A manifest pointing at a file of the runner: read, it would show up in a problem.
-        rename($this->root.'/'.$added.'/template.yaml', $this->root.'/manifest.yaml');
-        symlink($this->root.'/manifest.yaml', $this->root.'/'.$added.'/template.yaml');
+        rename($this->root.'/'.$added.'/package.yaml', $this->root.'/manifest.yaml');
+        symlink($this->root.'/manifest.yaml', $this->root.'/'.$added.'/package.yaml');
         file_put_contents($this->root.'/manifest.yaml', 'runner secret: [');
 
         $problems = $this->check($this->added($added));
 
-        self::assertSame(['templates/acme/shop/1.0.0/template.yaml: Symbolic links are not allowed.'], $problems);
+        self::assertSame(['packages/acme/shop/1.0.0/package.yaml: Symbolic links are not allowed.'], $problems);
     }
 
     public function testRefusesALinkedDirectoryAboveTheVersion(): void
     {
         $this->addVersion('1.0.0', 'globex/shop');
-        symlink($this->root.'/templates/globex', $this->root.'/templates/acme');
+        symlink($this->root.'/packages/globex', $this->root.'/packages/acme');
 
         self::assertSame(
-            ['templates/acme: Not a directory: symbolic links are not allowed.'],
-            $this->check([new ChangedFile('A', 'templates/acme/shop/1.0.0/template.yaml')]),
+            ['packages/acme: Not a directory: symbolic links are not allowed.'],
+            $this->check([new ChangedFile('A', 'packages/acme/shop/1.0.0/package.yaml')]),
         );
     }
 
@@ -314,7 +326,7 @@ final class PullRequestCheckTest extends TestCase
         ftruncate($heavy, 21_000_000);
         fclose($heavy);
 
-        self::assertContains('templates/acme/shop/1.0.0: 21.0 MB: a version may weigh 20 MB at most, files included.', $this->check($this->added($added)));
+        self::assertContains('packages/acme/shop/1.0.0: 21.0 MB: a version may weigh 20 MB at most, files included.', $this->check($this->added($added)));
     }
 
     public function testAnOwnerYanksAPublishedVersion(): void
@@ -351,12 +363,12 @@ final class PullRequestCheckTest extends TestCase
 
         file_put_contents($this->root.'/yanked.yaml', "acme/shop: 1.0.0\n");
         self::assertSame(
-            ['yanked.yaml: "acme/shop" is not a template name followed by a list of versions, or by "all".'],
+            ['yanked.yaml: "acme/shop" is not a package name followed by a list of versions, or by "all".'],
             $this->check([new ChangedFile('M', 'yanked.yaml')]),
         );
     }
 
-    public function testChecksAVersionAgainstTheTemplatesItRequires(): void
+    public function testChecksAVersionAgainstThePackagesItRequires(): void
     {
         $this->published[] = $this->addFixture('places', '1.2.0');
 
@@ -378,7 +390,7 @@ final class PullRequestCheckTest extends TestCase
 
     public function testRefusesARequirementTheCatalogDoesNotPublish(): void
     {
-        $problem = 'templates/acme/people/1.0.0/template.yaml: spec.requires.acme/places: The catalog publishes no version of acme/places that fits ^1.0 and is not yanked: publish it first, in a pull request of its own.';
+        $problem = 'packages/acme/people/1.0.0/package.yaml: spec.requires.acme/places: The catalog publishes no version of acme/places that fits ^1.0 and is not yanked: publish it first, in a pull request of its own.';
         $people = $this->added($this->addFixture('people', '1.0.0'));
 
         // Nor in the same pull request: it is not published yet.
@@ -386,18 +398,18 @@ final class PullRequestCheckTest extends TestCase
         // Not said twice, the checker's way.
         self::assertSame([], array_values(array_filter($this->check($people), static fn (string $given): bool => str_contains($given, 'must be installed'))));
 
-        $this->published[] = 'templates/acme/places/1.2.0';
+        $this->published[] = 'packages/acme/places/1.2.0';
         $this->yanked = "acme/places: [1.2.0]\n";
         self::assertContains($problem, $this->check($people));
     }
 
-    public function testRefusesTemplatesRequiringEachOther(): void
+    public function testRefusesPackagesRequiringEachOther(): void
     {
         $this->published[] = $this->addFixture('places', '1.2.0');
         $this->published[] = $this->addFixture('people', '1.0.0');
 
         self::assertContains(
-            'templates/acme/places/1.3.0/template.yaml: spec.requires: These templates would require each other: acme/places requires acme/people requires acme/places. None of them could be installed.',
+            'packages/acme/places/1.3.0/package.yaml: spec.requires: These packages would require each other: acme/places requires acme/people requires acme/places. None of them could be installed.',
             $this->check($this->added($this->addFixture('places', '1.3.0', ['acme/people' => '^1.0']))),
         );
     }

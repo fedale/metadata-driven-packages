@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests;
+namespace Fedale\PackageCatalog\Tests;
 
-use Fedale\TemplateCatalog\BuildFailed;
-use Fedale\TemplateCatalog\CatalogBuilder;
-use Fedale\TemplateCatalog\Site\SiteBuilder;
-use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
-use Fedale\TemplateFormat\Archive;
-use Fedale\TemplateFormat\DocumentCodec;
-use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\PackageDirectory;
-use Fedale\TemplateFormat\SchemaValidator;
-use Fedale\TemplateFormat\SeedRecords;
-use Fedale\TemplateFormat\Signature;
-use Fedale\TemplateFormat\TemplateIndex;
+use Fedale\PackageCatalog\BuildFailed;
+use Fedale\PackageCatalog\CatalogBuilder;
+use Fedale\PackageCatalog\Site\SiteBuilder;
+use Fedale\PackageCatalog\Tests\Support\TemporaryCatalog;
+use Fedale\PackageFormat\Archive;
+use Fedale\PackageFormat\DocumentCodec;
+use Fedale\PackageFormat\FieldTypes\FieldTypeCatalog;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\PackageDirectory;
+use Fedale\PackageFormat\RepositoryIndex;
+use Fedale\PackageFormat\SchemaValidator;
+use Fedale\PackageFormat\SeedRecords;
+use Fedale\PackageFormat\Signature;
 use PHPUnit\Framework\TestCase;
 
 final class CatalogBuilderTest extends TestCase
 {
     use TemporaryCatalog;
 
-    private const string ADDRESS = 'https://fedale.github.io/metadata-driven-templates/index.json';
+    private const string ADDRESS = 'https://fedale.github.io/metadata-driven-packages/index.json';
 
     /** @var array{public: string, secret: string} */
     private array $keys;
@@ -48,25 +48,36 @@ final class CatalogBuilderTest extends TestCase
         $entries = $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
 
         self::assertSame([['acme/shop', '1.0.0', true], ['acme/shop', '1.1.0', false]], array_map(static fn ($entry): array => [$entry->name, $entry->version, $entry->yanked], $entries));
-        $index = TemplateIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
+        $index = RepositoryIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
         self::assertSame('1.1.0', $index->latest('acme/shop')?->version);
         foreach ($index->versions('acme/shop') as $entry) {
             // The address metadata-driven downloads from: relative to the index.
-            self::assertSame('https://fedale.github.io/metadata-driven-templates/archives/acme/shop-'.$entry->version.'.tar.gz', $entry->url);
+            self::assertSame('https://fedale.github.io/metadata-driven-packages/archives/acme/shop-'.$entry->version.'.tar.gz', $entry->url);
             self::assertSame(hash_file('sha256', $this->root.'/site/archives/acme/shop-'.$entry->version.'.tar.gz'), $entry->sha256);
-            self::assertSame(['format' => 'metadata-driven/v1'], $entry->requires);
+            self::assertSame(['format' => 'metadata-driven/v2'], $entry->requires);
             self::assertTrue(Signature::verify($entry, $this->keys['public']));
         }
         self::assertTrue($index->find('acme/shop', '1.0.0')?->yanked);
         self::assertSame($this->keys['public']."\n", file_get_contents($this->root.'/site/catalog.pub'));
     }
 
-    public function testARemovedTemplateHasEveryVersionYanked(): void
+    public function testBuildsTheVersionsPublishedInFormatV1(): void
+    {
+        $this->addVersionV1('0.9.0', 'acme/legacy');
+
+        $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
+
+        $entry = RepositoryIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS)->find('acme/legacy', '0.9.0');
+        self::assertSame(['format' => 'metadata-driven/v1'], $entry?->requires);
+        self::assertTrue(Signature::verify($entry, $this->keys['public']));
+    }
+
+    public function testARemovedPackageHasEveryVersionYanked(): void
     {
         file_put_contents($this->root.'/yanked.yaml', "acme/shop: all\n");
         $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
 
-        $index = TemplateIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
+        $index = RepositoryIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
         foreach ($index->versions('acme/shop') as $entry) {
             self::assertTrue($entry->yanked, $entry->version);
             // The flag is signed: no one without the key lists them again.
@@ -77,7 +88,7 @@ final class CatalogBuilderTest extends TestCase
     public function testTheSameSourcesGiveTheSameSite(): void
     {
         $this->builder()->build($this->root, $this->root.'/first', $this->keys['secret']);
-        touch($this->root.'/templates/acme/shop/1.0.0/template.yaml', time() - 3600);
+        touch($this->root.'/packages/acme/shop/1.0.0/package.yaml', time() - 3600);
         $this->builder()->build($this->root, $this->root.'/second', $this->keys['secret']);
 
         self::assertFileEquals($this->root.'/first/index.json', $this->root.'/second/index.json');
@@ -108,7 +119,7 @@ final class CatalogBuilderTest extends TestCase
     {
         $this->addVersion('1.2.0', manifestVersion: '1.1.0');
 
-        $this->assertFails(['templates/acme/shop/1.2.0: The manifest says acme/shop 1.1.0.'], $this->keys['secret']);
+        $this->assertFails(['packages/acme/shop/1.2.0: The manifest says acme/shop 1.1.0.'], $this->keys['secret']);
         self::assertDirectoryDoesNotExist($this->root.'/site');
     }
 
@@ -121,9 +132,9 @@ final class CatalogBuilderTest extends TestCase
 
     public function testRefusesALinkedVersion(): void
     {
-        symlink($this->root.'/templates/acme/shop/1.0.0', $this->root.'/templates/acme/shop/1.2.0');
+        symlink($this->root.'/packages/acme/shop/1.0.0', $this->root.'/packages/acme/shop/1.2.0');
 
-        $this->assertFails(['templates/acme/shop/1.2.0: Not a directory: symbolic links are not allowed.'], $this->keys['secret']);
+        $this->assertFails(['packages/acme/shop/1.2.0: Not a directory: symbolic links are not allowed.'], $this->keys['secret']);
     }
 
     public function testBuildsIntoANewOrEmptyDirectory(): void
@@ -134,15 +145,15 @@ final class CatalogBuilderTest extends TestCase
         $this->assertFails([$this->root.'/site: The site is built into a new or empty directory.'], $this->keys['secret']);
     }
 
-    public function testBuildsTemplatesRequiringTemplates(): void
+    public function testBuildsPackagesRequiringPackages(): void
     {
         $this->addFixture('places', '1.2.0');
         $this->addFixture('people', '1.0.0');
 
         $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
 
-        $index = TemplateIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
-        self::assertSame(['format' => 'metadata-driven/v1', 'acme/places' => '^1.0'], $index->find('acme/people', '1.0.0')?->requires);
+        $index = RepositoryIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
+        self::assertSame(['format' => 'metadata-driven/v2', 'acme/places' => '^1.0'], $index->find('acme/people', '1.0.0')?->requires);
 
         // A requirement yanked since stays one: what was published keeps building.
         file_put_contents($this->root.'/yanked.yaml', "acme/places: all\n");
@@ -158,7 +169,7 @@ final class CatalogBuilderTest extends TestCase
             self::fail('The build must fail.');
         } catch (BuildFailed $e) {
             // First, the cause of the references to its items failing after it.
-            self::assertSame('templates/acme/people/1.0.0/template.yaml: spec.requires.acme/places: The catalog publishes no version of acme/places that fits ^1.0 and is not yanked: publish it first, in a pull request of its own.', $e->problems[0] ?? null);
+            self::assertSame('packages/acme/people/1.0.0/package.yaml: spec.requires.acme/places: The catalog publishes no version of acme/places that fits ^1.0 and is not yanked: publish it first, in a pull request of its own.', $e->problems[0] ?? null);
         }
     }
 

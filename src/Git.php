@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
@@ -44,7 +44,7 @@ final readonly class Git
     }
 
     /**
-     * The version directories on the base branch: templates/<vendor>/<name>/<version>.
+     * The version directories on the base branch: packages/<vendor>/<name>/<version>.
      *
      * @return list<string>
      *
@@ -52,7 +52,7 @@ final readonly class Git
      */
     public function versionDirectories(string $base): array
     {
-        $directories = explode("\0", rtrim($this->run(['ls-tree', '-d', '-r', '-z', '--name-only', $base, '--', PullRequestCheck::TEMPLATES]), "\0"));
+        $directories = explode("\0", rtrim($this->run(['ls-tree', '-d', '-r', '-z', '--name-only', $base, '--', PullRequestCheck::PACKAGES]), "\0"));
 
         return array_values(array_filter($directories, static fn (string $directory): bool => 4 === \count(explode('/', $directory))));
     }

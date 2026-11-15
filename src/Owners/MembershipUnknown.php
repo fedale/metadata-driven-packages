@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Owners;
+namespace Fedale\PackageCatalog\Owners;
 
 final class MembershipUnknown extends \RuntimeException
 {

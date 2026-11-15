@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
 /**
  * The catalog cannot be published: nothing was written.

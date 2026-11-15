@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests\Owners;
+namespace Fedale\PackageCatalog\Tests\Owners;
 
-use Fedale\TemplateCatalog\Owners\GitHubOrganizationMembers;
-use Fedale\TemplateCatalog\Owners\MembershipUnknown;
+use Fedale\PackageCatalog\Owners\GitHubOrganizationMembers;
+use Fedale\PackageCatalog\Owners\MembershipUnknown;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -17,7 +17,7 @@ use Symfony\Component\Yaml\Yaml;
  */
 final readonly class Vendors
 {
-    /** The vendor part of a template name ("acme" in "acme/shop"). */
+    /** The vendor part of a package name ("acme" in "acme/shop"). */
     public const string VENDOR_PATTERN = '~^[a-z][a-z0-9-]*$~';
 
     /** A GitHub login: letters, digits and single hyphens, at most 39 characters. */

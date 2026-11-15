@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Owners;
+namespace Fedale\PackageCatalog\Owners;
 
 /**
  * Whether a GitHub user is a public member of an organization: an organization listed among a

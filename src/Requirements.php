@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
-use Fedale\TemplateFormat\Constraint;
-use Fedale\TemplateFormat\Format;
-use Fedale\TemplateFormat\Package;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\Problem;
+use Fedale\PackageFormat\Constraint;
+use Fedale\PackageFormat\Format;
+use Fedale\PackageFormat\Package;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\Problem;
 
 /**
- * The templates a version requires (spec.requires), as the catalog publishes them: for each, the
+ * The packages a version requires (spec.requires), as the catalog publishes them: for each, the
  * highest version its constraint allows and that is not yanked, the one an installation would
  * take. The format's checker checks the version against them: its references to their items,
  * its ids against theirs.
  *
  * A requirement the catalog does not publish in a fitting version is refused: an installation
- * taking the template from the catalog would find it nowhere.
+ * taking the package from the catalog would find it nowhere.
  */
 final readonly class Requirements
 {
@@ -62,7 +62,7 @@ final readonly class Requirements
     }
 
     /**
-     * The format's checks of a version against the templates it requires, as the catalog
+     * The format's checks of a version against the packages it requires, as the catalog
      * publishes them; a requirement it does not publish is said so, rather than as the checker
      * says it ("it must be installed"), which reads as advice to an installation.
      *
@@ -74,12 +74,12 @@ final readonly class Requirements
         // The missing requirements first: the references to their items fail with them.
         $problems = [];
         foreach ($missing as $name => $constraint) {
-            $problems[] = new Problem(Format::MANIFEST, 'spec.requires.'.$name, \sprintf('The catalog publishes no version of %s that fits %s and is not yanked: publish it first, in a pull request of its own.', $name, $constraint));
+            $problems[] = new Problem($package->manifest->path, 'spec.requires.'.$name, \sprintf('The catalog publishes no version of %s that fits %s and is not yanked: publish it first, in a pull request of its own.', $name, $constraint));
         }
 
         return [...$problems, ...array_values(array_filter(
             $checker->check($package, $required),
-            static fn (Problem $problem): bool => !(Format::MANIFEST === $problem->path && \in_array(substr($problem->at, \strlen('spec.requires.')), array_map(strval(...), array_keys($missing)), true)),
+            static fn (Problem $problem): bool => !($package->manifest->path === $problem->path && \in_array(substr($problem->at, \strlen('spec.requires.')), array_map(strval(...), array_keys($missing)), true)),
         ))];
     }
 
@@ -94,7 +94,7 @@ final readonly class Requirements
 
     /**
      * @param non-empty-list<string> $path
-     * @param array<string, true>    $seen the templates whose requirements were followed already
+     * @param array<string, true>    $seen the packages whose requirements were followed already
      */
     private function walk(Package $package, array $path, array $seen): ?string
     {
@@ -131,7 +131,7 @@ final readonly class Requirements
         }
         $fitting = array_values(array_filter($this->versions[$name] ?? [], static fn (string $version): bool => $parsed->allows($version)));
         usort($fitting, static fn (string $a, string $b): int => version_compare($b, $a));
-        // Every version of a removed template counts as yanked.
+        // Every version of a removed package counts as yanked.
         $usable = array_values(array_filter($fitting, fn (string $version): bool => !$this->yanked->has($name, $version)));
         $version = $usable[0] ?? ($this->yankedIfNothingElse ? ($fitting[0] ?? null) : null);
 
@@ -139,7 +139,7 @@ final readonly class Requirements
     }
 
     /**
-     * @return array<string, string> the templates a version requires: name => constraint
+     * @return array<string, string> the packages a version requires: name => constraint
      */
     private static function requires(Package $package): array
     {

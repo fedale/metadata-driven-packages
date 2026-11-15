@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog\Tests;
+namespace Fedale\PackageCatalog\Tests;
 
-use Fedale\TemplateCatalog\Yanked;
+use Fedale\PackageCatalog\Yanked;
 use PHPUnit\Framework\TestCase;
 
 final class YankedTest extends TestCase
@@ -29,7 +29,7 @@ final class YankedTest extends TestCase
         self::assertSame([], $after->differences($after));
     }
 
-    public function testAllRemovesATemplate(): void
+    public function testAllRemovesAPackage(): void
     {
         $yanked = Yanked::fromYaml("acme/shop: all\nacme/geo-italy: [1.0.0]\n");
 
@@ -38,7 +38,7 @@ final class YankedTest extends TestCase
         self::assertTrue($yanked->has('acme/shop', '9.9.9'));
         self::assertFalse($yanked->isRemoved('acme/geo-italy'));
         self::assertSame(['acme/shop'], $yanked->removed());
-        // A removal, and a template listed again, are changes of their own.
+        // A removal, and a package listed again, are changes of their own.
         self::assertSame([['acme/shop', 'all']], $yanked->differences(Yanked::fromYaml("acme/geo-italy: [1.0.0]\n")));
         self::assertSame([['acme/shop', 'all']], Yanked::fromYaml("acme/geo-italy: [1.0.0]\n")->differences($yanked));
     }

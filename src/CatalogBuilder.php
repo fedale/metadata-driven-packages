@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
-use Fedale\TemplateCatalog\Site\SiteBuilder;
-use Fedale\TemplateFormat\Archive;
-use Fedale\TemplateFormat\Format;
-use Fedale\TemplateFormat\IndexEntry;
-use Fedale\TemplateFormat\InvalidPackage;
-use Fedale\TemplateFormat\Package;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\PackageDirectory;
-use Fedale\TemplateFormat\Signature;
-use Fedale\TemplateFormat\TemplateIndex;
+use Fedale\PackageCatalog\Site\SiteBuilder;
+use Fedale\PackageFormat\Archive;
+use Fedale\PackageFormat\Format;
+use Fedale\PackageFormat\IndexEntry;
+use Fedale\PackageFormat\InvalidPackage;
+use Fedale\PackageFormat\Package;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\PackageDirectory;
+use Fedale\PackageFormat\RepositoryIndex;
+use Fedale\PackageFormat\Signature;
 
 /**
  * Builds what GitHub Pages serves: index.json, an archive per version and the pages of the
@@ -28,7 +28,7 @@ final readonly class CatalogBuilder
 {
     public const string PUBLIC_KEY = 'catalog.pub';
     public const string ARCHIVES = 'archives';
-    public const string SITE_URL = 'https://fedale.github.io/metadata-driven-templates/';
+    public const string SITE_URL = 'https://fedale.github.io/metadata-driven-packages/';
 
     /** GitHub Pages refuses sites above 1 GB: stop well before. */
     public const int MAX_SITE_BYTES = 900_000_000;
@@ -60,7 +60,7 @@ final readonly class CatalogBuilder
             throw new BuildFailed([\sprintf('%s: The site is built into a new or empty directory.', $output)]);
         }
 
-        $index = TemplateIndex::empty();
+        $index = RepositoryIndex::empty();
         $entries = [];
         $bytes = 0;
         foreach ($packages as $directory => $package) {
@@ -116,7 +116,7 @@ final readonly class CatalogBuilder
     {
         $problems = [];
         $packages = [];
-        $directories = glob($root.'/'.PullRequestCheck::TEMPLATES.'/*/*/*', \GLOB_ONLYDIR) ?: [];
+        $directories = glob($root.'/'.PullRequestCheck::PACKAGES.'/*/*/*', \GLOB_ONLYDIR) ?: [];
         sort($directories);
         foreach ($directories as $path) {
             $directory = substr($path, \strlen($root) + 1);
@@ -127,7 +127,7 @@ final readonly class CatalogBuilder
                 continue;
             }
             if (1 !== preg_match(Format::NAME_PATTERN, $vendor.'/'.$name) || 1 !== preg_match(Format::VERSION_PATTERN, $version)) {
-                $problems[] = \sprintf('%s: Not a version directory, templates/<vendor>/<name>/<version>.', $directory);
+                $problems[] = \sprintf('%s: Not a version directory, packages/<vendor>/<name>/<version>.', $directory);
                 continue;
             }
             try {
@@ -150,7 +150,7 @@ final readonly class CatalogBuilder
     }
 
     /**
-     * Every version checked by the format's checker against the templates it requires, as the
+     * Every version checked by the format's checker against the packages it requires, as the
      * catalog has them (Requirements): the highest fitting version not yanked, a yanked one
      * when there is no other (a version listed once stays valid when its requirement is yanked).
      *
@@ -167,7 +167,7 @@ final readonly class CatalogBuilder
         $requirements = new Requirements(
             $versions,
             $yanked,
-            static fn (string $name, string $version): ?Package => $packages[PullRequestCheck::TEMPLATES.'/'.$name.'/'.$version] ?? null,
+            static fn (string $name, string $version): ?Package => $packages[PullRequestCheck::PACKAGES.'/'.$name.'/'.$version] ?? null,
             yankedIfNothingElse: true,
         );
         $problems = [];
@@ -195,12 +195,12 @@ final readonly class CatalogBuilder
 
         $problems = [];
         foreach ($yanked->all() as [$name, $version]) {
-            if (!isset($packages[PullRequestCheck::TEMPLATES.'/'.$name.'/'.$version])) {
+            if (!isset($packages[PullRequestCheck::PACKAGES.'/'.$name.'/'.$version])) {
                 $problems[] = \sprintf('%s: %s %s is not published.', PullRequestCheck::YANKED, $name, $version);
             }
         }
         foreach ($yanked->removed() as $name) {
-            if ([] === array_filter(array_keys($packages), static fn (string $directory): bool => str_starts_with($directory, PullRequestCheck::TEMPLATES.'/'.$name.'/'))) {
+            if ([] === array_filter(array_keys($packages), static fn (string $directory): bool => str_starts_with($directory, PullRequestCheck::PACKAGES.'/'.$name.'/'))) {
                 $problems[] = \sprintf('%s: %s is not published.', PullRequestCheck::YANKED, $name);
             }
         }
@@ -260,6 +260,10 @@ final readonly class CatalogBuilder
     }
 
     /**
+     * What a version requires, as its manifest says: the format and the packages. The format is
+     * the one its files are written in: a version published in v1 (its manifest in template.yaml)
+     * is read as v2, but its archive holds the v1 files.
+     *
      * @return array<string, string>
      */
     private static function requires(Package $package): array
@@ -267,6 +271,9 @@ final readonly class CatalogBuilder
         $requires = [];
         foreach (\is_array($package->manifest->spec['requires'] ?? null) ? $package->manifest->spec['requires'] : [] as $name => $constraint) {
             $requires[(string) $name] = \is_scalar($constraint) ? (string) $constraint : '';
+        }
+        if (Format::MANIFEST_V1 === $package->manifest->path) {
+            $requires['format'] = Format::READS[0];
         }
 
         return $requires;

@@ -2,35 +2,35 @@
 
 declare(strict_types=1);
 
-namespace Fedale\TemplateCatalog;
+namespace Fedale\PackageCatalog;
 
-use Fedale\TemplateCatalog\Owners\Maintainers;
-use Fedale\TemplateCatalog\Owners\MembershipUnknown;
-use Fedale\TemplateCatalog\Owners\OrganizationMembers;
-use Fedale\TemplateFormat\Format;
-use Fedale\TemplateFormat\InvalidPackage;
-use Fedale\TemplateFormat\Package;
-use Fedale\TemplateFormat\PackageChecker;
-use Fedale\TemplateFormat\PackageDirectory;
-use Fedale\TemplateFormat\Problem;
-use Fedale\TemplateFormat\Versions\ItemStates;
-use Fedale\TemplateFormat\Versions\VersionCheck;
+use Fedale\PackageCatalog\Owners\Maintainers;
+use Fedale\PackageCatalog\Owners\MembershipUnknown;
+use Fedale\PackageCatalog\Owners\OrganizationMembers;
+use Fedale\PackageFormat\Format;
+use Fedale\PackageFormat\InvalidPackage;
+use Fedale\PackageFormat\Package;
+use Fedale\PackageFormat\PackageChecker;
+use Fedale\PackageFormat\PackageDirectory;
+use Fedale\PackageFormat\Problem;
+use Fedale\PackageFormat\Versions\ItemStates;
+use Fedale\PackageFormat\Versions\VersionCheck;
 
 /**
  * What a pull request must satisfy before a maintainer reviews it.
  *
- * Under templates/, a pull request may only add version directories,
- * templates/<vendor>/<name>/<version>/: a published version never changes, since installations
+ * Under packages/, a pull request may only add version directories,
+ * packages/<vendor>/<name>/<version>/: a published version never changes, since installations
  * compare against it when they upgrade. Each added version must be a valid package (the format
  * library's checks), match its path, be higher than the versions already listed, stay under the
  * size limit, and belong to a vendor the author owns. Its number must fit what it changed
  * against the highest version already listed (VersionCheck, the rules metadata-driven applies
- * when it upgrades): installations rely on a minor version removing nothing. The templates it
+ * when it upgrades): installations rely on a minor version removing nothing. The packages it
  * requires must be published, in a version fitting each constraint and not yanked, and it is
  * checked against those versions (Requirements); it may not close a cycle of requirements.
  *
  * yanked.yaml may yank a version, or list it again, of a vendor the author owns; or remove a
- * template (`vendor/name: all`), which then takes no new version until it is listed again.
+ * package (`vendor/name: all`), which then takes no new version until it is listed again.
  *
  * vendors.yaml must stay valid, and only a maintainer (CODEOWNERS) verifies a vendor or stops
  * verifying it. Anything else about it, and catalog.pub or the tools, is left to the
@@ -41,7 +41,7 @@ use Fedale\TemplateFormat\Versions\VersionCheck;
  */
 final readonly class PullRequestCheck
 {
-    public const string TEMPLATES = 'templates';
+    public const string PACKAGES = 'packages';
     public const string YANKED = 'yanked.yaml';
     public const string VENDORS = 'vendors.yaml';
 
@@ -83,11 +83,11 @@ final readonly class PullRequestCheck
                 $problems = [...$problems, ...self::checkVendors($root, $base, $author)];
                 continue;
             }
-            if (self::TEMPLATES !== $parts[0]) {
+            if (self::PACKAGES !== $parts[0]) {
                 continue;
             }
             if (\count($parts) < 5) {
-                $problems[] = \sprintf('%s: A template\'s files go in templates/<vendor>/<name>/<version>/.', $change->path);
+                $problems[] = \sprintf('%s: A package\'s files go in packages/<vendor>/<name>/<version>/.', $change->path);
                 continue;
             }
             if (!$change->isAdded() || \in_array(implode('/', \array_slice($parts, 0, 4)), $base->published, true)) {
@@ -113,17 +113,17 @@ final readonly class PullRequestCheck
     }
 
     /**
-     * @param list<string> $listed the versions of this template already published
+     * @param list<string> $listed the versions of this package already published
      *
      * @return list<string>
      */
     private function checkVersion(string $root, string $directory, string $vendor, string $name, string $version, array $listed, BaseBranch $base, ?string $author): array
     {
-        $template = $vendor.'/'.$name;
+        $packageName = $vendor.'/'.$name;
         $vendors = $base->vendors;
-        $removed = $base->yanked->isRemoved($template);
-        if (1 !== preg_match(Format::NAME_PATTERN, $template)) {
-            return [\sprintf('%s: "%s" is not a template name (vendor/name, lowercase letters, digits and hyphens).', $directory, $template)];
+        $removed = $base->yanked->isRemoved($packageName);
+        if (1 !== preg_match(Format::NAME_PATTERN, $packageName)) {
+            return [\sprintf('%s: "%s" is not a package name (vendor/name, lowercase letters, digits and hyphens).', $directory, $packageName)];
         }
         if (1 !== preg_match(Format::VERSION_PATTERN, $version)) {
             return [\sprintf('%s: "%s" is not a version (major.minor.patch, e.g. 1.0.0).', $directory, $version)];
@@ -131,7 +131,7 @@ final readonly class PullRequestCheck
 
         $problems = [];
         if ($removed) {
-            $problems[] = \sprintf('%s: %s is removed (yanked.yaml: all): list it again before publishing a new version.', $directory, $template);
+            $problems[] = \sprintf('%s: %s is removed (yanked.yaml: all): list it again before publishing a new version.', $directory, $packageName);
         }
         if (!$vendors->has($vendor)) {
             $problems[] = \sprintf('%s: The vendor "%s" is not registered: add it to vendors.yaml in a pull request of its own first.', $directory, $vendor);
@@ -153,7 +153,7 @@ final readonly class PullRequestCheck
         );
         if ([] !== $newer) {
             usort($newer, static fn (string $a, string $b): int => version_compare($a, $b));
-            $problems[] = \sprintf('%s: %s %s is already listed: the new version must be higher.', $directory, $template, end($newer));
+            $problems[] = \sprintf('%s: %s %s is already listed: the new version must be higher.', $directory, $packageName, end($newer));
         }
 
         try {
@@ -161,15 +161,20 @@ final readonly class PullRequestCheck
         } catch (InvalidPackage $e) {
             return [...$problems, ...self::located($directory, $e->problems)];
         }
-        if ($package->name() !== $template || $package->version() !== $version) {
-            $problems[] = \sprintf('%s: The manifest says %s %s: the directory must be templates/%s/%s/.', $directory, $package->name(), $package->version(), $package->name(), $package->version());
+        // Published versions may be of format v1 (template.yaml), and are read as they are; a new
+        // one is written in v2.
+        if (Format::MANIFEST !== $package->manifest->path) {
+            $problems[] = \sprintf('%s: A new version is written in format v2: its manifest is %s, of kind Package (metadata:package:export writes it so).', $directory, Format::MANIFEST);
+        }
+        if ($package->name() !== $packageName || $package->version() !== $version) {
+            $problems[] = \sprintf('%s: The manifest says %s %s: the directory must be packages/%s/%s/.', $directory, $package->name(), $package->version(), $package->name(), $package->version());
         }
 
         $requirements = $this->requirements($root, $base);
         $structure = self::located($directory, $requirements->check($this->checker, $package));
         $cycle = $requirements->cycle($package);
         if (null !== $cycle) {
-            $structure[] = \sprintf('%s/%s: spec.requires: These templates would require each other: %s. None of them could be installed.', $directory, Format::MANIFEST, $cycle);
+            $structure[] = \sprintf('%s/%s: spec.requires: These packages would require each other: %s. None of them could be installed.', $directory, Format::MANIFEST, $cycle);
         }
         if ([] !== $structure || [] !== $newer) {
             return [...$problems, ...$structure];
@@ -191,7 +196,7 @@ final readonly class PullRequestCheck
         }
 
         return new Requirements($versions, $base->yanked, function (string $name, string $version) use ($root): ?Package {
-            $directory = self::TEMPLATES.'/'.$name.'/'.$version;
+            $directory = self::PACKAGES.'/'.$name.'/'.$version;
             // As for the version checked: nothing read through a link.
             if ([] !== Links::in($root, $directory)) {
                 return null;
@@ -220,7 +225,7 @@ final readonly class PullRequestCheck
         }
         usort($listed, static fn (string $a, string $b): int => version_compare($a, $b));
         $previous = end($listed);
-        $previousDirectory = self::TEMPLATES.'/'.$package->name().'/'.$previous;
+        $previousDirectory = self::PACKAGES.'/'.$package->name().'/'.$previous;
         $links = Links::in($root, $previousDirectory);
         if ([] !== $links) {
             return $links;
@@ -277,14 +282,14 @@ final readonly class PullRequestCheck
         foreach ($yanked->differences($base->yanked) as [$name, $version]) {
             $vendor = explode('/', $name)[0];
             if (Yanked::ALL === $version) {
-                if ([] === array_filter($base->published, static fn (string $directory): bool => str_starts_with($directory, self::TEMPLATES.'/'.$name.'/'))) {
+                if ([] === array_filter($base->published, static fn (string $directory): bool => str_starts_with($directory, self::PACKAGES.'/'.$name.'/'))) {
                     $problems[] = \sprintf('%s: %s is not published.', self::YANKED, $name);
                 } elseif (null !== $author && true !== ($owns = $this->owns($base->vendors, $vendor, $author))) {
-                    $problems[] = \is_string($owns) ? \sprintf('%s: %s', self::YANKED, $owns) : \sprintf('%s: %s is not an owner of the vendor "%s": only its owners remove its templates.', self::YANKED, $author, $vendor);
+                    $problems[] = \is_string($owns) ? \sprintf('%s: %s', self::YANKED, $owns) : \sprintf('%s: %s is not an owner of the vendor "%s": only its owners remove its packages.', self::YANKED, $author, $vendor);
                 }
                 continue;
             }
-            if (!\in_array(self::TEMPLATES.'/'.$name.'/'.$version, $base->published, true)) {
+            if (!\in_array(self::PACKAGES.'/'.$name.'/'.$version, $base->published, true)) {
                 $problems[] = \sprintf('%s: %s %s is not published.', self::YANKED, $name, $version);
             } elseif (null !== $author && true !== ($owns = $this->owns($base->vendors, $vendor, $author))) {
                 $problems[] = \is_string($owns) ? \sprintf('%s: %s', self::YANKED, $owns) : \sprintf('%s: %s is not an owner of the vendor "%s": only its owners yank its versions.', self::YANKED, $author, $vendor);
